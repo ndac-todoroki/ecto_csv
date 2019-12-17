@@ -16,9 +16,14 @@ defmodule EctoCsv.Table do
 
   @readonly_mode [:read]
 
+  @doc """
+  Parameter `name` should be a name to identify the table.
+  This would be the GenServer's name, and thus unique among all tables.
+  """
   def start_link(opts \\ []) when is_list(opts) do
     with {:ok, path} <- opts |> Keyword.fetch(:path),
          {:ok, format} <- opts |> Keyword.fetch(:format),
+         {:ok, name} <- opts |> Keyword.fetch(:name),
          {:ok, parser} <- EctoCsv.Parser.select(format) do
       state = %__MODULE__{
         format: format,
@@ -27,7 +32,7 @@ defmodule EctoCsv.Table do
         parse_options: [skip_headers: true]
       }
 
-      GenServer.start_link(__MODULE__, state)
+      GenServer.start_link(__MODULE__, state, name: name)
     end
   end
 
@@ -36,6 +41,10 @@ defmodule EctoCsv.Table do
 
   @spec stream(GenServer.name(), Keyword.t()) :: Enumerable.t()
   def stream(pid, opts), do: GenServer.call(pid, {:stream, opts})
+
+  #
+  # GenServer implementations
+  #
 
   @impl GenServer
   @spec init(EctoCsv.Reader.t()) :: {:ok, EctoCsv.Reader.t()}
