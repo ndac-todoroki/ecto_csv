@@ -1,52 +1,55 @@
 defmodule EctoCsv.Adapter.Queryable do
   @behaviour Ecto.Adapter.Queryable
 
+  alias EctoCsv.{Database, Table}
+
   import EctoCsv.Common.Exception
 
-  def prepare(
-        operation,
-        %Ecto.Query{from: {table, schema}, order_bys: order_bys, limit: limit} = query
-      ) do
-    fetch_id = fn map -> Map.fetch!(map, :id) end
-    ordering_fn = fn list -> list |> Enum.sort_by(&fetch_id.(&1)) end
-    limit = get_limit(limit)
-    limit_fn = if limit == nil, do: & &1, else: &Enum.take(&1, limit)
-    # context = Context.new(table, schema)
-    context = :something
-    {:nocache, {operation, query, {limit, limit_fn}, context, ordering_fn}}
+  @type operation :: :all | :update_all | :delete_all
+
+  @impl Ecto.Adapter.Queryable
+  @spec prepare(any, Ecto.Query.t()) :: {:nocache, {operation(), Ecto.Query.t()}}
+  def prepare(operation, %Ecto.Query{} = query) do
+    {:nocache, {operation, query}}
   end
 
-  # Extract limit from an `Ecto.Query`
-  defp get_limit(nil), do: nil
-  defp get_limit(%Ecto.Query.QueryExpr{expr: limit}), do: limit
-
+  @impl Ecto.Adapter.Queryable
   def execute(
-        %{} = adapter_meta,
-        %{select: term, preloads: term, sources: term} = query_meta,
-        {:nocache, {:all, %Ecto.Query{} = query, {limit, limit_fn}, context, ordering_fn}},
-        params,
-        options
+        %{} = _adapter_meta,
+        %{} = _query_meta,
+        {:nocache, {:all, %Ecto.Query{} = query}},
+        _params,
+        _options
       ) do
-    count = 0
-    results = []
-    {count, [results]}
+    table_name = query.from |> parse_from_expr()
+
+    table = Database.child_process(table_name)
+    list = table |> Table.stream() |> Enum.to_list()
+
+    {length(list), list}
   end
 
   def execute(_, _, {_, {:update_all, _, _, _, _}}, _, _), do: write_not_supported!()
   def execute(_, _, {_, {:delete_all, _, _, _, _}}, _, _), do: write_not_supported!()
 
+  @impl Ecto.Adapter.Queryable
   def stream(
-        %{} = adapter_meta,
-        %{select: term, preloads: term, sources: term} = query_meta,
-        {:nocache, {:all, %Ecto.Query{} = query, {limit, limit_fn}, context, ordering_fn}},
-        params,
-        options
+        %{} = _adapter_meta,
+        %{} = _query_meta,
+        {:nocache, {:all, %Ecto.Query{} = query}},
+        _params,
+        _options
       ) do
-    count = 0
-    results = []
-    {count, [results]}
+    table_name = query.from |> parse_from_expr()
+
+    table = Database.child_process(table_name)
+    table |> Table.stream()
   end
 
   def stream(_, _, {_, {:update_all, _, _, _, _}}, _, _), do: write_not_supported!()
   def stream(_, _, {_, {:delete_all, _, _, _, _}}, _, _), do: write_not_supported!()
+
+  @spec parse_from_expr(any) :: String.t()
+  defp parse_from_expr(nil), do: raise("no from given")
+  defp parse_from_expr(%Ecto.Query.FromExpr{source: {table_name, _schema}}), do: table_name
 end

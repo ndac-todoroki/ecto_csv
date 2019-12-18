@@ -2,7 +2,7 @@ defmodule EctoCsv.Database do
   # Automatically defines child_spec/1
   use DynamicSupervisor
 
-  @registry DatabaseTables
+  @registry Database.TablesRegistry
 
   alias EctoCsv.Table
 

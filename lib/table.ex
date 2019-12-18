@@ -36,11 +36,11 @@ defmodule EctoCsv.Table do
     end
   end
 
-  @spec read(GenServer.name()) :: Enum.t()
-  def read(pid), do: GenServer.call(pid, {:read})
+  @spec read(GenServer.name(), Keyword.t()) :: Enum.t()
+  def read(pid, opts \\ []), do: GenServer.call(pid, {:read, opts})
 
   @spec stream(GenServer.name(), Keyword.t()) :: Enumerable.t()
-  def stream(pid, opts), do: GenServer.call(pid, {:stream, opts})
+  def stream(pid, opts \\ []), do: GenServer.call(pid, {:stream, opts})
 
   #
   # GenServer implementations
@@ -60,11 +60,12 @@ defmodule EctoCsv.Table do
   end
 
   @impl GenServer
-  def handle_call({:read}, _from, %__MODULE__{} = state) do
-    stream =
-      File.read!(state.path)
-      |> state.parser.parse_enumerable(state.parse_options)
+  def handle_call({:read, opts}, _from, %__MODULE__{} = state) do
+    list =
+      File.stream!(state.path, opts ++ @readonly_mode, :line)
+      |> state.parser.parse_stream(state.parse_options)
+      |> Enum.to_list()
 
-    {:reply, stream, state}
+    {:reply, list, state}
   end
 end
