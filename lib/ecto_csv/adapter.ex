@@ -1,10 +1,30 @@
 defmodule EctoCsv.Adapter do
+  @moduledoc """
+  The main module to behave as an adapter.
+
+  Usage:
+
+  ```elixir
+  defmodule MyApp.Repo do
+    use Ecto.Repo,
+      otp_app: :my_app,
+      adapter: EctoCsv.Adapter,
+      read_only: true  # as this is CSV
+  end
+  ```
+  """
+
   @behaviour Ecto.Adapter
+  @behaviour Ecto.Adapter.Queryable
+
+  @queryable_implementation EctoCsv.Adapter.Queryable
+
+  #
+  # Ecto.Adapter
+  #
 
   @impl Ecto.Adapter
-  defmacro __before_compile__(_env) do
-    unquote(:ok)
-  end
+  defmacro __before_compile__(_env), do: :ok
 
   @impl Ecto.Adapter
   def ensure_all_started(_config, type) do
@@ -34,5 +54,16 @@ defmodule EctoCsv.Adapter do
   @impl Ecto.Adapter
   def dumpers(:boolean, type), do: [&EctoCsv.Encoder.from_boolean/1, type]
   def dumpers(:binary_id, type), do: [Ecto.UUID, type]
-  def dumpers(_others, type), do: [&EctoCsv.Encoder.as_string/1, type]
+  def dumpers(_others, type), do: [type]
+
+  #
+  # Ecto.Adapter.Queryable
+  #
+  defdelegate prepare(operation, query), to: @queryable_implementation
+
+  defdelegate execute(adapter_meta, query_meta, prepared, params, options),
+    to: @queryable_implementation
+
+  defdelegate stream(adapter_meta, query_meta, prepared, params, options),
+    to: @queryable_implementation
 end

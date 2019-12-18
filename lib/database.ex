@@ -26,4 +26,30 @@ defmodule EctoCsv.Database do
 
   # :via tupleをつくる
   def child_process(name), do: {:via, Registry, {@registry, name}}
+
+  def fetch_table(%{name: name} = settings) do
+    if Registry.lookup(@registry, child_process(name)) == [],
+      do: start_child(settings.path, settings.format, settings.name)
+
+    name |> child_process()
+  end
+
+  defmodule Settings do
+    defstruct [:path, :format, :name]
+
+    defmacro set_table!(settings \\ []) do
+      quote do
+        unless unquote(settings) |> Keyword.keyword?(),
+          do: raise("settings not Keyword. #{unquote(settings)}")
+
+        def table_settings do
+          %EctoCsv.Database.Settings{
+            path: unquote(settings) |> Keyword.fetch!(:path),
+            format: unquote(settings) |> Keyword.fetch!(:format),
+            name: unquote(settings) |> Keyword.fetch!(:name)
+          }
+        end
+      end
+    end
+  end
 end

@@ -7,22 +7,4 @@ defmodule EctoCsv.Parser do
   def select(:csv), do: {:ok, CsvParser}
   def select(:tsv), do: {:ok, TsvParser}
   def select(_), do: :error
-
-  # defmodule StreamResult do
-  #   defstruct headers: [], body: nil
-  #
-  #   @type t :: %__MODULE__{
-  #           headers: [String.t()],
-  #           body: File.Stream.t()
-  #         }
-  # end
-
-  # defmodule ListResult do
-  #   defstruct headers: [], body: nil
-  #
-  #   @type t :: %__MODULE__{
-  #           headers: [String.t()],
-  #           body: Enumerable.t()
-  #         }
-  # end
 end

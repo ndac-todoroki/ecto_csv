@@ -29,7 +29,7 @@ defmodule EctoCsv.Table do
         format: format,
         parser: parser,
         path: path,
-        parse_options: [skip_headers: true]
+        parse_options: [skip_headers: false]
       }
 
       GenServer.start_link(__MODULE__, state, name: name)
@@ -55,6 +55,8 @@ defmodule EctoCsv.Table do
     stream =
       File.stream!(state.path, opts ++ @readonly_mode, :line)
       |> state.parser.parse_stream(state.parse_options)
+      |> Stream.with_index(1)
+      |> Stream.map(fn {data, index} -> {index, [data]} end)
 
     {:reply, stream, state}
   end
@@ -64,7 +66,6 @@ defmodule EctoCsv.Table do
     list =
       File.stream!(state.path, opts ++ @readonly_mode, :line)
       |> state.parser.parse_stream(state.parse_options)
-      |> Enum.to_list()
 
     {:reply, list, state}
   end

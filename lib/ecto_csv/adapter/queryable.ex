@@ -21,10 +21,12 @@ defmodule EctoCsv.Adapter.Queryable do
         _params,
         _options
       ) do
-    table_name = query.from |> parse_from_expr()
+    # Schema module == nil だと死ぬ
+    {_table_name, schema_module} = query.from |> parse_from_expr()
+    %Database.Settings{} = settings = schema_module.table_settings
 
-    table = Database.child_process(table_name)
-    list = table |> Table.stream() |> Enum.to_list()
+    table = Database.fetch_table(settings)
+    list = table |> Table.read() |> Enum.to_list()
 
     {length(list), list}
   end
@@ -40,16 +42,20 @@ defmodule EctoCsv.Adapter.Queryable do
         _params,
         _options
       ) do
-    table_name = query.from |> parse_from_expr()
+    # Schema module == nil だと死ぬ
+    {_table_name, schema_module} = query.from |> parse_from_expr()
+    %Database.Settings{} = settings = schema_module.table_settings
 
-    table = Database.child_process(table_name)
+    table = Database.fetch_table(settings)
     table |> Table.stream()
   end
 
   def stream(_, _, {_, {:update_all, _, _, _, _}}, _, _), do: write_not_supported!()
   def stream(_, _, {_, {:delete_all, _, _, _, _}}, _, _), do: write_not_supported!()
 
-  @spec parse_from_expr(any) :: String.t()
+  @spec parse_from_expr(any) :: {String.t(), module}
   defp parse_from_expr(nil), do: raise("no from given")
-  defp parse_from_expr(%Ecto.Query.FromExpr{source: {table_name, _schema}}), do: table_name
+
+  defp parse_from_expr(%Ecto.Query.FromExpr{source: {table_name, schema}}),
+    do: {table_name, schema}
 end
