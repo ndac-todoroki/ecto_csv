@@ -35,6 +35,10 @@ defmodule EctoCsv.Database do
   end
 
   defmodule Settings do
+    @moduledoc """
+    CSVの設定をスキーマモジュールに持たせるための苦肉の策
+    """
+
     defstruct [:path, :format, :name]
 
     defmacro set_table!(settings \\ []) do
