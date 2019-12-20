@@ -42,6 +42,9 @@ defmodule EctoCsv.Table do
   @spec stream(GenServer.name()) :: Enumerable.t()
   def stream(pid), do: GenServer.call(pid, :stream)
 
+  @spec reload(GenServer.name()) :: :ok
+  def reload(pid), do: GenServer.cast(pid, :reload)
+
   #
   # GenServer implementations
   #
@@ -70,5 +73,12 @@ defmodule EctoCsv.Table do
       |> state.parser.parse_stream(state.parse_options)
 
     {:reply, list, state}
+  end
+
+  @impl GenServer
+  def handle_cast(:reload, %__MODULE__{path: path} = state) do
+    state = %{state | data: File.read!(path)}
+
+    {:noreply, state}
   end
 end
